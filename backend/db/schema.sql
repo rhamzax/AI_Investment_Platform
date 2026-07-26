@@ -89,6 +89,24 @@ create index if not exists memos_ticker_idx on memos (ticker);
 create index if not exists memos_run_id_idx on memos (run_id);
 
 -- ---------------------------------------------------------------------------
+-- daily_prices: end-of-day close per ticker, used to chart portfolio value
+-- over time and compute current market value vs. cost basis. One row per
+-- ticker/date — populated by POST /prices/sync (ingestion/daily_price.py),
+-- not by the agent pipeline.
+-- ---------------------------------------------------------------------------
+create table if not exists daily_prices (
+    id uuid primary key default gen_random_uuid(),
+    ticker text not null references tickers (ticker),
+    date date not null,
+    close numeric not null,
+    created_at timestamptz not null default now(),
+    unique (ticker, date)
+);
+
+create index if not exists daily_prices_ticker_date_idx
+    on daily_prices (ticker, date desc);
+
+-- ---------------------------------------------------------------------------
 -- updated_at trigger for positions
 -- ---------------------------------------------------------------------------
 create or replace function set_updated_at()
@@ -117,6 +135,7 @@ alter table positions enable row level security;
 alter table raw_data_cache enable row level security;
 alter table theses enable row level security;
 alter table memos enable row level security;
+alter table daily_prices enable row level security;
 
 create policy "allow all - tickers" on tickers
     for all using (true) with check (true);
@@ -131,6 +150,9 @@ create policy "allow all - theses" on theses
     for all using (true) with check (true);
 
 create policy "allow all - memos" on memos
+    for all using (true) with check (true);
+
+create policy "allow all - daily_prices" on daily_prices
     for all using (true) with check (true);
 
 -- ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@ def get_agent_llm() -> BaseChatModel:
     e.g. back to Anthropic via get_llm("anthropic:claude-sonnet-5").
     """
     return get_llm(
-        "gemini-flash-latest",
+        "gemini-3.5-flash-lite",
         model_provider="google_genai",
         api_key=os.environ["GEMINI_API_KEY"],
     )

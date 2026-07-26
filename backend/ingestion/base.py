@@ -17,11 +17,26 @@ def require_env(name: str) -> str:
 
 
 def ensure_ticker(ticker: str, company_name: str | None = None) -> None:
+    """Ensure a row exists in `tickers`.
+
+    Only writes company_name when a real one is given. Callers that don't
+    have a name handy (most ingestion modules just need the FK satisfied)
+    must NOT clobber a name another module already resolved. Plain upsert
+    can't express "leave this column alone" when it's NOT NULL — Postgres
+    validates the proposed insert row's NOT NULL constraints before it even
+    checks for a conflict — so this does an explicit exists-check instead.
+    """
     client = get_client()
-    client.table("tickers").upsert(
-        {"ticker": ticker, "company_name": company_name or ticker},
-        on_conflict="ticker",
-    ).execute()
+    existing = client.table("tickers").select("ticker").eq("ticker", ticker).execute().data
+
+    if not existing:
+        client.table("tickers").insert(
+            {"ticker": ticker, "company_name": company_name or ticker}
+        ).execute()
+    elif company_name:
+        client.table("tickers").update({"company_name": company_name}).eq(
+            "ticker", ticker
+        ).execute()
 
 
 def get_cached_or_fetch(
