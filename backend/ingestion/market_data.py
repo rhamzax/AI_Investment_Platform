@@ -10,7 +10,9 @@ TTL = timedelta(hours=1)
 
 
 def _price_history(tk: yf.Ticker) -> list[dict]:
-    hist = tk.history(period="3mo")
+    # dropna: yfinance can include a trailing row with NaN OHLC for the
+    # current in-progress trading day, which isn't valid JSON.
+    hist = tk.history(period="3mo").dropna(subset=["Open", "High", "Low", "Close"])
     return [
         {
             "date": index.strftime("%Y-%m-%d"),
@@ -26,6 +28,14 @@ def _price_history(tk: yf.Ticker) -> list[dict]:
 
 def _json_safe_records(df) -> list[dict]:
     return json.loads(df.to_json(orient="records", date_format="iso"))
+
+
+def _json_safe(value):
+    """yfinance's .info dict can contain raw NaN floats, which aren't valid
+    JSON and break the Supabase insert."""
+    if isinstance(value, float) and value != value:  # NaN
+        return None
+    return value
 
 
 def _options_chain(tk: yf.Ticker) -> dict:
@@ -48,10 +58,10 @@ def fetch(ticker: str) -> dict:
         "price_history": _price_history(tk),
         "options_chain": _options_chain(tk),
         "info": {
-            "company_name": info.get("longName") or info.get("shortName"),
-            "sector": info.get("sector"),
-            "market_cap": info.get("marketCap"),
-            "pe_ratio": info.get("trailingPE"),
+            "company_name": _json_safe(info.get("longName") or info.get("shortName")),
+            "sector": _json_safe(info.get("sector")),
+            "market_cap": _json_safe(info.get("marketCap")),
+            "pe_ratio": _json_safe(info.get("trailingPE")),
         },
     }
 
