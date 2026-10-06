@@ -1,4 +1,8 @@
-# Thesis Arena
+
+
+https://github.com/user-attachments/assets/df24d235-6010-4deb-b6ec-306ab6fd6ae8
+
+# AI Investment Platform
 
 An AI investment research platform: for each ticker in your portfolio, a
 LangGraph pipeline runs a **Bull agent** and a **Bear agent** against live
