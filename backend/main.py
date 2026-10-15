@@ -94,6 +94,15 @@ def create_position(body: CreatePosition):
         .insert({"ticker": ticker, "shares": body.shares, "cost_basis": body.cost_basis})
         .execute()
     )
+
+    # Fetch prices now so the new row shows a value immediately instead of
+    # waiting for the next "Refresh Prices". A failed fetch doesn't undo the
+    # add — the next refresh will pick the ticker up.
+    try:
+        sync_daily_prices(ticker)
+    except Exception:
+        logging.exception("Initial price sync failed for %s", ticker)
+
     return row.data[0]
 
 

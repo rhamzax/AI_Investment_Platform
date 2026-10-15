@@ -1,5 +1,3 @@
-
-
 https://github.com/user-attachments/assets/df24d235-6010-4deb-b6ec-306ab6fd6ae8
 
 # AI Investment Platform
@@ -64,14 +62,14 @@ needs Python: LLM calls, yfinance, ticker validation).
 The schema (`backend/db/schema.sql`) has 6 tables. `tickers` is the parent
 every other table foreign-keys into, so a typo can't create orphaned rows.
 
-| Table | Written by | When |
-|---|---|---|
-| `tickers` | `ingestion/base.py::ensure_ticker()` | Any ingestion call, `POST /positions`, or the agent pipeline. Only ever sets `company_name` when a real one is available — a bare call from a module that doesn't have a name (most of them) leaves an existing name untouched instead of overwriting it with the raw ticker symbol. |
-| `positions` | `POST /positions` (FastAPI) | User adds a holding via the "Add Position" modal |
-| `raw_data_cache` | `ingestion/base.py::get_cached_or_fetch()` | Every ingestion source call, gated by a per-source TTL (1h for yfinance/Finnhub, 1 day for SEC/FRED/Alpha Vantage) so repeated `generate_thesis` runs don't re-hit rate-limited APIs. One row per actual fetch — old rows aren't deleted, so it doubles as an audit trail. |
-| `theses` | `agents/bull.py`, `agents/bear.py` | Each LangGraph run inserts exactly 2 rows (`stance='bull'` and `stance='bear'`) sharing one `run_id` |
-| `memos` | `agents/judge.py` | One row per run — the Judge's verdict, confidence, summary, and FKs to the two `theses` rows it weighed |
-| `daily_prices` | `ingestion/daily_price.py::sync_daily_prices()`, called from `POST /prices/sync` | User clicks "Refresh Prices". Upserts on `(ticker, date)`, so re-syncing overwrites same-day rows instead of duplicating — unlike `raw_data_cache`, this is a proper time series, not a fetch log |
+| Table              | Written by                                                                           | When                                                                                                                                                                                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tickers`        | `ingestion/base.py::ensure_ticker()`                                               | Any ingestion call, `POST /positions`, or the agent pipeline. Only ever sets `company_name` when a real one is available — a bare call from a module that doesn't have a name (most of them) leaves an existing name untouched instead of overwriting it with the raw ticker symbol. |
+| `positions`      | `POST /positions` (FastAPI)                                                        | User adds a holding via the "Add Position" modal                                                                                                                                                                                                                                          |
+| `raw_data_cache` | `ingestion/base.py::get_cached_or_fetch()`                                         | Every ingestion source call, gated by a per-source TTL (1h for yfinance/Finnhub, 1 day for SEC/FRED/Alpha Vantage) so repeated `generate_thesis` runs don't re-hit rate-limited APIs. One row per actual fetch — old rows aren't deleted, so it doubles as an audit trail.             |
+| `theses`         | `agents/bull.py`, `agents/bear.py`                                               | Each LangGraph run inserts exactly 2 rows (`stance='bull'` and `stance='bear'`) sharing one `run_id`                                                                                                                                                                                |
+| `memos`          | `agents/judge.py`                                                                  | One row per run — the Judge's verdict, confidence, summary, and FKs to the two `theses` rows it weighed                                                                                                                                                                                |
+| `daily_prices`   | `ingestion/daily_price.py::sync_daily_prices()`, called from `POST /prices/sync` | User clicks "Refresh Prices". Upserts on `(ticker, date)`, so re-syncing overwrites same-day rows instead of duplicating — unlike `raw_data_cache`, this is a proper time series, not a fetch log                                                                                    |
 
 **Row Level Security** is enabled on every table but every policy is
 `USING (true) WITH CHECK (true)` — permissive, because this is a
@@ -93,13 +91,13 @@ The frontend calls these via `NEXT_PUBLIC_TRIGGER_API_URL` (defaults to
 `http://localhost:8000` in dev). CORS is wide open (`allow_origins=["*"]`) —
 fine for a local demo, tighten before deploying.
 
-| Endpoint | Method | Called from | What it does |
-|---|---|---|---|
-| `/health` | GET | — | Liveness check |
-| `/generate/{ticker}` | POST | "Generate Thesis" / "Regenerate Thesis" buttons | Runs `generate_thesis(ticker)` as a `BackgroundTasks` job and returns `202` immediately — ingestion + 3 sequential LLM calls take too long to hold a request open for. The frontend doesn't wait on the response; it finds out the result landed via Realtime/polling on `memos`. |
-| `/positions` | POST | "Add Position" modal | Body `{ticker, shares, cost_basis}`. Validates the ticker is real via a live yfinance lookup (`ingestion/validate.py`), upserts it into `tickers` with its real company name, then inserts the `positions` row. Returns `400` for an unresolvable ticker. |
-| `/prices/sync` | POST | "Refresh Prices" button | For every distinct ticker in `positions`, pulls ~6 months of daily closes from yfinance and upserts them into `daily_prices`. Runs synchronously (a few seconds for a handful of tickers) since it's an explicit, infrequent user action. |
-| `/tickers/search` | GET | Ticker autocomplete in "Add Position" | Query param `q`. Wraps `yfinance.Search` (Yahoo Finance's own search) so the modal only lets you pick a real equity match instead of typing an arbitrary symbol. |
+| Endpoint               | Method | Called from                                     | What it does                                                                                                                                                                                                                                                                               |
+| ---------------------- | ------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/health`            | GET    | —                                              | Liveness check                                                                                                                                                                                                                                                                             |
+| `/generate/{ticker}` | POST   | "Generate Thesis" / "Regenerate Thesis" buttons | Runs `generate_thesis(ticker)` as a `BackgroundTasks` job and returns `202` immediately — ingestion + 3 sequential LLM calls take too long to hold a request open for. The frontend doesn't wait on the response; it finds out the result landed via Realtime/polling on `memos`. |
+| `/positions`         | POST   | "Add Position" modal                            | Body `{ticker, shares, cost_basis}`. Validates the ticker is real via a live yfinance lookup (`ingestion/validate.py`), upserts it into `tickers` with its real company name, then inserts the `positions` row. Returns `400` for an unresolvable ticker.                        |
+| `/prices/sync`       | POST   | "Refresh Prices" button                         | For every distinct ticker in `positions`, pulls ~6 months of daily closes from yfinance and upserts them into `daily_prices`. Runs synchronously (a few seconds for a handful of tickers) since it's an explicit, infrequent user action.                                              |
+| `/tickers/search`    | GET    | Ticker autocomplete in "Add Position"           | Query param `q`. Wraps `yfinance.Search` (Yahoo Finance's own search) so the modal only lets you pick a real equity match instead of typing an arbitrary symbol.                                                                                                                       |
 
 ## Backend: ingestion layer (`backend/ingestion/`)
 
@@ -154,6 +152,7 @@ own `loading.tsx` skeletons.
 ### Live updates without a refresh
 
 `PortfolioTable` and `TickerMemoView` both:
+
 1. Subscribe to Supabase Realtime (`postgres_changes` on `memos`) — the fast path
 2. Also start a **polling fallback** after triggering `/generate/:ticker` (checks every 3s, up to 3 minutes) in case the websocket event is ever missed, and surface a friendly error if generation is still not done after the timeout instead of spinning forever
 
