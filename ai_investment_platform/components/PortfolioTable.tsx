@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { fetchLatestMemoSince } from "@/lib/queries";
@@ -77,6 +78,7 @@ export function PortfolioTable({
   latestPrices: Record<string, DailyPrice>;
   companyNames: Record<string, string>;
 }) {
+  const router = useRouter();
   const [memos, setMemos] = useState(initialMemos);
   const [generating, setGenerating] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -159,6 +161,24 @@ export function PortfolioTable({
     }
   }
 
+  async function handleRemove(position: Position) {
+    if (!window.confirm(`Remove ${position.ticker} from your holdings?`)) return;
+    setErrors((prev) => ({ ...prev, [position.ticker]: "" }));
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_TRIGGER_API_URL}/positions/${position.id}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      router.refresh();
+    } catch {
+      setErrors((prev) => ({
+        ...prev,
+        [position.ticker]: "Couldn't remove this position.",
+      }));
+    }
+  }
+
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-card">
       {positions.map((position, i) => {
@@ -193,6 +213,14 @@ export function PortfolioTable({
               className="rounded-full bg-ink px-3.5 py-1.5 text-xs font-medium text-page transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isGenerating ? "Generating…" : "Generate Thesis"}
+            </button>
+
+            <button
+              onClick={() => handleRemove(position)}
+              aria-label={`Remove ${position.ticker}`}
+              className="text-ink-muted hover:text-critical"
+            >
+              ✕
             </button>
 
             {errors[position.ticker] ? (

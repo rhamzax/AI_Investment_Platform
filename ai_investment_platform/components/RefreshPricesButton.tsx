@@ -37,7 +37,9 @@ export function RefreshPricesButton({ lastSynced }: { lastSynced: string | null 
         <p className="text-xs text-critical">{error}</p>
       ) : lastSynced ? (
         <p className="text-xs text-ink-muted">
-          Prices as of {new Date(lastSynced).toLocaleDateString()}
+          {/* lastSynced is a bare YYYY-MM-DD; parse it as local midnight, not
+              UTC, or it renders as the previous day west of Greenwich. */}
+          Prices as of {new Date(`${lastSynced}T00:00:00`).toLocaleDateString()}
         </p>
       ) : null}
     </div>
