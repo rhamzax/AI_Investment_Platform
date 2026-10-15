@@ -97,6 +97,15 @@ def create_position(body: CreatePosition):
     return row.data[0]
 
 
+@app.delete("/positions/{position_id}", status_code=204)
+def delete_position(position_id: str):
+    """Remove a position. Its ticker, prices, theses and memos are kept —
+    they're shared research history, not owned by the position."""
+    deleted = get_client().table("positions").delete().eq("id", position_id).execute().data
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Position not found")
+
+
 @app.post("/prices/sync")
 def sync_prices():
     """Sync daily closes for every ticker currently held in `positions`."""
