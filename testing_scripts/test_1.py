@@ -11,10 +11,10 @@ import re
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-TICKER = "C"
-COMPANY = "Citigroup"
+TICKER = "GOOGL"
+COMPANY = "Alphabet Inc."
 SHARES = "10"
-COST_BASIS = "415.25"
+COST_BASIS = "300.00"
 
 OPEN_FORM_BUTTON = (By.XPATH, "//button[normalize-space()='+ Add Position']")
 TICKER_INPUT = (By.CSS_SELECTOR, "input[placeholder='Search company or ticker…']")
